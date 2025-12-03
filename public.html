@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamedevist Paketleyici</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+        :root {
+            --primary-color: #0078d4;
+            --primary-hover: #005a9e;
+            --success-color: #107c10;
+            --error-color: #e81123;
+            --light-gray: #f4f4f9;
+            --medium-gray: #ddd;
+            --dark-gray: #555;
+            --font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* --- LOGIN SCREEN STYLES (SADELEŞTİRİLDİ) --- */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #222; /* Daha şık, koyu arka plan */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-box {
+            background: white;
+            padding: 50px;
+            border-radius: 10px;
+            text-align: center;
+            width: 300px;
+        }
+
+        .login-box input { 
+            width: 100%; padding: 15px; margin-bottom: 20px; 
+            border: 2px solid #ccc; border-radius: 5px; 
+            font-size: 1.5em; text-align: center; letter-spacing: 8px;
+            box-sizing: border-box; outline: none;
+            font-family: monospace;
+        }
+        
+        .login-box input:focus { border-color: #333; }
+        
+        .login-btn {
+            background: #333; color: white; border:none; padding: 15px; width:100%;
+            font-size: 1.1em; border-radius: 5px; cursor: pointer;
+        }
+        .login-btn:hover { background: #000; }
+
+        /* --- MAIN APP STYLES --- */
+        .main-wrapper {
+            display: none; 
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        #question-area {
+            flex-grow: 1;
+            max-width: 800px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .question-container {
+            background-color: #fff;
+            border: 1px solid var(--medium-gray);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            animation: slideInFromRight 0.5s ease-out forwards;
+        }
+
+        /* --- ANIMATIONS --- */
+        #completion-message {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        .flying-asset {
+            width: 50px;
+            height: 60px;
+            background-color: var(--primary-color);
+            border: 3px solid white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            position: relative;
+        }
+        .flying-asset::before {
+            content: '';
+            position: absolute;
+            top: -1px; right: -1px;
+            border-width: 0 16px 16px 0;
+            border-style: solid;
+            border-color: transparent #fff;
+        }
+
+        #completion-message.animate .flying-asset {
+            animation: flyToBag 1s ease-in-out forwards;
+        }
+
+        #asset-bag-container {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .asset-bag-icon {
+            width: 80px;
+            height: auto;
+            fill: var(--dark-gray);
+        }
+        #bag-counter {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.8em;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+        #bag-counter.pop { animation: popCounter 0.4s ease-out; }
+
+        @keyframes slideInFromRight {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes flyToBag {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            30% { transform: translate(0, -50px) scale(1.2); }
+            100% { transform: translate(350px, -250px) scale(0); opacity: 0; }
+        }
+        @keyframes popCounter {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.4); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* --- UI ELEMENTS --- */
+        h1 { color: var(--primary-color); text-align: center; margin-bottom: 20px; }
+        h3 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-top: 0; color: #333; }
+        label { display: block; margin-top: 15px; font-weight: 600; color: var(--dark-gray); }
+        input[type="text"], input[type="file"], textarea { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; transition: border-color 0.3s; font-family: var(--font-family);}
+        input[type="text"]:focus, textarea:focus { border-color: var(--primary-color); outline: none; }
+        
+        button { background-color: var(--primary-color); color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px; font-size: 1em; font-weight: 600; transition: background-color 0.3s, transform 0.2s; }
+        button:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
+        button:disabled { background-color: #aaa; cursor: not-allowed; transform: none; }
+        
+        .nav-buttons { margin-top: 25px; border-top: 1px solid var(--light-gray); padding-top: 20px; }
+        .photopea-btn { background-color: #f0a000; margin-bottom: 15px; width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between;}
+        .photopea-btn::after { content: '🎨'; font-size: 1.2em; }
+        .photopea-btn:hover { background-color: #d88f00; }
+        
+        .error-message { color: var(--error-color); font-size: 0.9em; margin-top: 5px; font-weight: 600; }
+        .info-text { font-size: 0.9em; color: #444; margin-bottom: 15px; font-weight: bold; background-color: #eaf3fb; padding: 10px; border-radius: 5px; border-left: 4px solid var(--primary-color); }
+        .explanation-text { font-size: 0.9em; color: #666; line-height: 1.6; margin-top: -5px; margin-bottom: 15px; }
+        .hidden { display: none !important; }
+        .file-status { font-size: 0.9em; color: var(--success-color); margin-top: 5px; }
+        
+        #progress-sidebar { width: 300px; background-color: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); align-self: flex-start; }
+        #progress-sidebar h3 { margin-top: 0; text-align: center; color: var(--dark-gray); border-bottom: none; }
+        #progress-list { list-style: none; padding: 0; margin: 0; }
+        .progress-item { padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; border-left: 5px solid var(--medium-gray); background-color: var(--light-gray); transition: all 0.3s ease; font-size: 0.9em; }
+        .progress-item.active { font-weight: 600; border-left-color: var(--primary-color); background-color: #eaf3fb; }
+        .progress-item.completed { border-left-color: var(--success-color); background-color: #e7f8e7; text-decoration: line-through; color: #666; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <input type="password" id="password-input" maxlength="4" onkeypress="handleEnter(event)">
+            <button class="login-btn" onclick="checkPassword()">Giriş Yap</button>
+            <p id="login-error" class="error-message"></p>
+        </div>
+    </div>
+
+    <div class="main-wrapper" id="main-app">
+        <div id="question-area">
+             <h1>🎮 Gamedevist PlayStation Paketleyici</h1>
+             
+             <div id="completion-message" class="question-container hidden">
+                <div class="flying-asset"></div>
+             </div>
+
+            <div id="q-0" class="question-container">
+                <h3>1. Adım: Temel Bilgiler</h3>
+                <p class="explanation-text">PlayStation Store ve Metadata için temel bilgiler.</p>
+                
+                <label for="game-name">Oyunun Adı:</label>
+                <input type="text" id="game-name" placeholder="Örn: Supermarket Simulator">
+                
+                <label for="developer-name" style="margin-top:10px; display:block;">Geliştirici Adı:</label>
+                <input type="text" id="developer-name" placeholder="Örn: Gamedevist Studio">
+                
+                <p id="name-error" class="error-message"></p>
+            </div>
+
+            <div id="q-1" class="question-container hidden">
+                <h3>2. Adım: Mağaza Metinleri</h3> 
+                <p class="explanation-text">Bu metinler "Metadata" dosyasına işlenecektir. İngilizce (Default) metinleri buraya giriniz.</p>
+                
+                <label>Short Description (Max 80 Karakter):</label>
+                <input type="text" id="short-desc" maxlength="80" oninput="updateCharCount(this, 'short-count', 80)">
+                <p class="info-text" style="text-align:right;"><span id="short-count">0</span>/80</p>
+                
+                <label>Long Description (Max 3900 Karakter):</label>
+                <textarea id="long-desc" maxlength="3900" style="height:100px;" oninput="updateCharCount(this, 'long-count', 3900)"></textarea>
+                <p class="info-text" style="text-align:right;"><span id="long-count">0</span>/3900</p>
+
+                <div class="info-box" style="background:#222; padding:10px; font-size:0.85em; color:#ccc; margin-top:10px;">
+                    ℹ️ Paketleme sonunda oluşturulacak TXT dosyasında şu diller için şablon hazırlanacaktır: 
+                    English, Arabic, Chinese (Simp/Trad), Danish, Dutch, Finnish, French, German, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Russian, Spanish, Swedish, Turkish, Ukrainian.
+                </div>
+                <p id="text-error" class="error-message"></p>
+            </div>
+
+            <div id="q-2" class="question-container hidden">
+                <h3>3. Adım: Kapak Resimleri (Set A)</h3> 
+                <p class="explanation-text">Store sayfasının ana vitrin görselleri. Hepsi **JPG** formatında olmalıdır.</p>
+                
+                <label>1) Master Image (2160x2160):</label>
+                <input type="file" id="master-image" accept="image/jpeg" onchange="displayFileName(this)">
+                <button class="photopea-btn" onclick="openPhotopea(2160, 2160)">Photopea'da 2160x2160 Aç</button>
+                
+                <label style="margin-top:15px;">2) Cover Art - Logosuz (3840x2160):</label>
+                <input type="file" id="cover-art" accept="image/jpeg" onchange="displayFileName(this)">
+                <button class="photopea-btn" onclick="openPhotopea(3840, 2160)">Photopea'da 3840x2160 Aç</button>
+
+                <p class="file-status" id="cover-group-status"></p>
+                <p class="error-message" id="cover-group-error"></p>
+            </div>
+
+            <div id="q-3" class="question-container hidden">
+                <h3>4. Adım: Kapak Resimleri (Set B)</h3> 
+                <p class="explanation-text">Farklı cihaz ve yerleşimler için ek formatlar. Hepsi **JPG**.</p>
+                
+                <label>3) 16x9 Master Image (3840x2160):</label>
+                <input type="file" id="master-16x9" accept="image/jpeg">
+                <button class="photopea-btn" onclick="openPhotopea(3840, 2160)">Photopea'da 3840x2160 Aç</button>
+                
+                <label style="margin-top:15px;">4) 4x3 Master Image (2880x2160):</label>
+                <input type="file" id="master-4x3" accept="image/jpeg">
+                <button class="photopea-btn" onclick="openPhotopea(2880, 2160)">Photopea'da 2880x2160 Aç</button>
+                
+                <label style="margin-top:15px;">5) Portrait Banner (1440x2160):</label>
+                <input type="file" id="portrait-banner" accept="image/jpeg">
+                <button class="photopea-btn" onclick="openPhotopea(1440, 2160)">Photopea'da 1440x2160 Aç</button>
+                
+                <p class="error-message" id="secondary-cover-error"></p>
+            </div>
+
+            <div id="q-4" class="question-container hidden">
+                <h3>5. Adım: Dinamik Resimler</h3> 
+                <p class="explanation-text">Sayfa yapısı için gerekli katmanlar.</p>
+                
+                <label>Game Logo (Transparan PNG):</label>
+                <input type="file" id="game-logo" accept="image/png">
+                <small>Önerilen: Yüksek çözünürlük.</small>
+                <button class="photopea-btn" onclick="openPhotopea(2000, 1000)">Photopea'da Aç (Logo)</button>
+                
+                <label style="margin-top:15px;">Background Layer Art (3840x2160 JPG):</label>
+                <input type="file" id="bg-layer" accept="image/jpeg">
+                <small>Not: Sol tarafı karartılmış olmalıdır.</small>
+                <button class="photopea-btn" onclick="openPhotopea(3840, 2160)">Photopea'da 3840x2160 Aç</button>
+
+                <p class="error-message" id="dynamic-error"></p>
+            </div>
+
+            <div id="q-5" class="question-container hidden">
+                <h3>6. Adım: Ekran Görüntüleri</h3> 
+                <p class="explanation-text">Mağaza vitrini için oyun içi görseller.</p>
+                
+                <label>Screenshots (Max 10):</label>
+                <input type="file" id="store-screenshots" multiple accept="image/jpeg" onchange="displayFileCount(this)">
+                <p class="info-text">Gereksinim: Tam olarak **3840x2160 JPG** olmalıdır.</p>
+                <button class="photopea-btn" onclick="openPhotopea(3840, 2160)">Photopea'da 3840x2160 Aç</button>
+                
+                <p class="file-status" id="store-screenshots-status"></p>
+                <p class="error-message" id="screenshots-error"></p>
+            </div>
+
+            <div id="q-6" class="question-container hidden">
+                <h3>7. Adım: PS5 Sistem Dosyaları</h3> 
+                <p class="explanation-text">Konsol arayüzü (UI) için gerekli **PNG** dosyalar.</p>
+                
+                <label>Splash Screen (3840x2160 PNG):</label>
+                <input type="file" id="splash-screen" accept="image/png">
+                <button class="photopea-btn" onclick="openPhotopea(3840, 2160)">Photopea'da 3840x2160 Aç</button>
+                
+                <label style="margin-top:15px;">Save Data Icon (228x128 PNG):</label>
+                <input type="file" id="save-icon" accept="image/png">
+                <button class="photopea-btn" onclick="openPhotopea(228, 128)">Photopea'da 228x128 Aç</button>
+
+                <p class="error-message" id="system-error"></p>
+            </div>
+
+            <div id="q-7" class="question-container hidden">
+                <h3>8. Adım: Başarım (Trophy) Görselleri</h3> 
+                <p class="explanation-text">Trophy ikonları ve grup kapağı.</p>
+                
+                <label>Trophy Icons (512x512 PNG):</label>
+                <input type="file" id="trophy-images" multiple accept="image/png" onchange="displayFileCount(this)">
+                <button class="photopea-btn" onclick="openPhotopea(512, 512)">Photopea'da 512x512 Aç</button>
+                
+                <label style="margin-top:15px;">Trophy Group Cover (512x512 PNG):</label>
+                <input type="file" id="trophy-cover" accept="image/png">
+                <button class="photopea-btn" onclick="openPhotopea(512, 512)">Photopea'da 512x512 Aç</button>
+                
+                <p class="file-status" id="trophy-images-status"></p>
+                <p class="error-message" id="trophy-error"></p>
+            </div>
+
+            <div id="q-8" class="question-container hidden">
+                <h3>9. Adım: PS5 Activity Card</h3> 
+                <p class="explanation-text">PS5 "Activities" özelliği için zorunlu görsel.</p>
+                
+                <label>Activity Card Image (864x1040 PNG):</label>
+                <input type="file" id="activity-card" accept="image/png">
+                <p class="info-text">Önemli: Görselin sol tarafı UI için boş bırakılmalı, odak sağda olmalı.</p>
+                <button class="photopea-btn" onclick="openPhotopea(864, 1040)">Photopea'da 864x1040 Aç</button>
+
+                <p class="error-message" id="activity-error"></p>
+            </div>
+
+            <div id="q-9" class="question-container hidden">
+                <h3>10. Adım: Paketleme ve Kontrol</h3>
+                <p>Tüm gereksinimler tamamlandı. ZIP dosyası aşağıdaki yapıda oluşturulacak:</p>
+                <ul style="text-align:left; font-size:0.9em; color:#ccc;">
+                    <li>📁 A_Store_Images (Tüm JPG'ler)</li>
+                    <li>📁 B_Dynamic_Layered (Logo, BG)</li>
+                    <li>📁 C_Screenshots (4K JPG)</li>
+                    <li>📁 D_Build_Assets (Splash, Save Icon)</li>
+                    <li>📁 E_Trophies_Activities (PNGs)</li>
+                    <li>📄 Metadata_Translations.txt (Çeviri Şablonu)</li>
+                </ul>
+                <p class="error-message" id="zip-status" style="color: #003791; font-weight: bold;"></p>
+                <button id="package-button" onclick="createAndDownloadZip()">📦 PS Paketini İndir</button>
+            </div>
+
+            <div class="nav-buttons">
+                <button id="prev-btn" onclick="prevQuestion()">Geri</button>
+                <button id="next-btn" onclick="nextQuestion()">Sonraki</button>
+            </div>
+        </div>
+
+        <aside id="progress-sidebar">
+            <div id="asset-bag-container">
+                <svg class="asset-bag-icon" viewBox="0 0 100 100">
+                    <path d="M20,45 C20,30 30,20 50,20 C70,20 80,30 80,45 C80,55 75,70 65,75 L60,55 L40,55 L35,75 C25,70 20,55 20,45 Z" stroke-width="5" stroke="currentColor" fill="none"/>
+                    <circle cx="35" cy="40" r="3" fill="currentColor"/><circle cx="35" cy="50" r="3" fill="currentColor"/><circle cx="30" cy="45" r="3" fill="currentColor"/><circle cx="40" cy="45" r="3" fill="currentColor"/><circle cx="65" cy="45" r="4" fill="currentColor"/>
+                </svg>
+                <div id="bag-counter">0</div>
+            </div>
+            <h3>İlerleme Durumu</h3>
+            <ul id="progress-list"></ul>
+        </aside>
+    </div>
+
+    <audio id="success-sfx" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_2c649d2e93.mp3?filename=success-1-6297.mp3" preload="auto"></audio>
+    <audio id="package-sfx" src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_e4cc229048.mp3?filename=zip-sound-effect-95548.mp3" preload="auto"></audio>
+
+    <script>
+        // --- PASSWORD SYSTEM ---
+        function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const correctPass = hours + minutes;
+            
+            if(input === correctPass) {
+                document.getElementById('login-overlay').style.display = 'none';
+                const mainApp = document.getElementById('main-app');
+                mainApp.style.display = 'flex';
+                initializeApp();
+            } else {
+                const err = document.getElementById('login-error');
+                err.textContent = "Hatalı şifre.";
+                setTimeout(() => { err.textContent = ""; }, 2000);
+            }
+        }
+        
+        function handleEnter(e) {
+            if(e.key === "Enter") checkPassword();
+        }
+
+        // --- MAIN APP LOGIC ---
+        let currentQuestionIndex = 0;
+        const questions = document.querySelectorAll('.question-container');
+        const totalQuestions = questions.length - 1; 
+        
+        const progressSteps = ["Temel Bilgiler", "Metinler", "Kapak Set A", "Kapak Set B", "Dinamik Resimler", "Screenshots", "Sistem Dosyaları", "Trophies", "Activity Card", "Paketleme"];
+        
+        function playSound(id) { const sound = document.getElementById(id); if(sound) { sound.currentTime = 0; sound.play(); } }
+
+        function initializeApp() {
+            showQuestion(0);
+            renderProgressList();
+            updateProgressIndicator();
+        }
+
+        function updateCharCount(input, counterId, max) {
+            const current = input.value.length;
+            document.getElementById(counterId).textContent = current;
+            if(current >= max) { input.style.borderColor = "red"; } else { input.style.borderColor = "#444"; }
+        }
+
+        function showQuestion(index) {
+            document.querySelectorAll('#question-area > .question-container').forEach(q => {
+                if(q.id !== 'completion-message') q.classList.add('hidden');
+            });
+
+            const questionToShow = document.getElementById(`q-${index}`);
+            if(questionToShow) questionToShow.classList.remove('hidden');
+            
+            document.getElementById('prev-btn').style.display = index === 0 ? 'none' : 'inline-block';
+            document.getElementById('next-btn').style.display = index === totalQuestions - 1 ? 'none' : 'inline-block';
+        }
+
+        function updateBagCounter(count) {
+            const counter = document.getElementById('bag-counter');
+            counter.textContent = count;
+            counter.classList.add('pop');
+            setTimeout(() => counter.classList.remove('pop'), 400);
+        }
+
+        async function nextQuestion() {
+            const isValid = await validateCurrentQuestion();
+            if (!isValid) return;
+
+            playSound('success-sfx');
+            
+            // Animation logic
+            const currentQuestionDiv = document.getElementById(`q-${currentQuestionIndex}`);
+            const completionMessageDiv = document.getElementById('completion-message');
+            completionMessageDiv.classList.add('animate');
+            currentQuestionDiv.classList.add('hidden');
+            completionMessageDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                completionMessageDiv.classList.add('hidden');
+                completionMessageDiv.classList.remove('animate'); 
+                if (currentQuestionIndex < totalQuestions - 1) {
+                    currentQuestionIndex++;
+                    showQuestion(currentQuestionIndex);
+                    updateProgressIndicator();
+                    updateBagCounter(currentQuestionIndex);
+                }
+            }, 800);
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion(currentQuestionIndex);
+                updateProgressIndicator();
+            }
+        }
+        
+        function renderProgressList() {
+            const list = document.getElementById('progress-list');
+            list.innerHTML = '';
+            progressSteps.forEach((step, index) => {
+                const li = document.createElement('li'); li.id = `progress-${index}`; li.className = 'progress-item';
+                li.textContent = step; list.appendChild(li);
+            });
+        }
+
+        function updateProgressIndicator() {
+            for (let i = 0; i < totalQuestions; i++) {
+                const item = document.getElementById(`progress-${i}`);
+                item.classList.remove('active', 'completed');
+                if (i < currentQuestionIndex) { item.classList.add('completed'); } 
+                else if (i === currentQuestionIndex) { item.classList.add('active'); }
+            }
+        }
+
+        // --- VALIDATION ---
+        async function validateCurrentQuestion() {
+            switch(currentQuestionIndex) {
+                case 0: return validateTextField('game-name', 'name-error', 'Oyun adı zorunludur.');
+                case 1: // Text Validation
+                    const shortLen = document.getElementById('short-desc').value.length;
+                    const longLen = document.getElementById('long-desc').value.length;
+                    const txtErr = document.getElementById('text-error');
+                    if(shortLen === 0 || longLen === 0) { txtErr.textContent = "Açıklamalar boş bırakılamaz."; return false; }
+                    if(shortLen > 80) { txtErr.textContent = "Kısa açıklama 80 karakteri geçemez."; return false; }
+                    if(longLen > 3900) { txtErr.textContent = "Uzun açıklama 3900 karakteri geçemez."; return false; }
+                    txtErr.textContent = ""; return true;
+
+                case 2: // Cover Set A (JPG)
+                    const v1 = await validateImageDimension(2160, 2160, 'master-image', 'cover-group-error', true, 'image/jpeg');
+                    if(!v1) return false;
+                    return await validateImageDimension(3840, 2160, 'cover-art', 'cover-group-error', true, 'image/jpeg');
+
+                case 3: // Cover Set B (JPG)
+                    const v3 = await validateImageDimension(3840, 2160, 'master-16x9', 'secondary-cover-error', true, 'image/jpeg');
+                    if(!v3) return false;
+                    const v4 = await validateImageDimension(2880, 2160, 'master-4x3', 'secondary-cover-error', true, 'image/jpeg');
+                    if(!v4) return false;
+                    return await validateImageDimension(1440, 2160, 'portrait-banner', 'secondary-cover-error', true, 'image/jpeg');
+
+                case 4: // Dynamic
+                    // Logo is flexible, just check PNG
+                    const vLogo = await validateImageDimension(0, 0, 'game-logo', 'dynamic-error', true, 'image/png', true);
+                    if(!vLogo) return false;
+                    // BG must be 3840x2160 JPG
+                    return await validateImageDimension(3840, 2160, 'bg-layer', 'dynamic-error', true, 'image/jpeg');
+
+                case 5: // Screenshots (JPG)
+                     return await validateStoreScreenshots();
+
+                case 6: // System (PNG)
+                    const vSplash = await validateImageDimension(3840, 2160, 'splash-screen', 'system-error', true, 'image/png');
+                    if(!vSplash) return false;
+                    return await validateImageDimension(228, 128, 'save-icon', 'system-error', true, 'image/png');
+
+                case 7: // Trophies (PNG)
+                    const vTrophies = await validateTrophyImages();
+                    if(!vTrophies) return false;
+                    return await validateImageDimension(512, 512, 'trophy-cover', 'trophy-error', true, 'image/png');
+
+                case 8: // Activity Card
+                    return await validateImageDimension(864, 1040, 'activity-card', 'activity-error', true, 'image/png');
+
+                default: return true;
+            }
+        }
+
+        // Generic Validations
+        function validateTextField(inputId, errorId, msg) {
+            if(document.getElementById(inputId).value.trim().length === 0) {
+                document.getElementById(errorId).textContent = msg; return false;
+            }
+            document.getElementById(errorId).textContent = ''; return true;
+        }
+
+        function validateImageDimension(w, h, id, errId, req, type, flex=false) {
+            const input = document.getElementById(id);
+            const err = document.getElementById(errId);
+            err.textContent = "";
+            if(input.files.length === 0) {
+                if(req) { err.textContent = "Bu dosya zorunludur."; return Promise.resolve(false); }
+                return Promise.resolve(true);
+            }
+            const file = input.files[0];
+            if(file.type !== type) { err.textContent = "Yanlış dosya formatı."; return Promise.resolve(false); }
+            
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = function() {
+                    if(flex || (this.width === w && this.height === h)) resolve(true);
+                    else { err.textContent = `Hatalı boyut: ${this.width}x${this.height}. Beklenen: ${w}x${h}`; resolve(false); }
+                };
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function validateStoreScreenshots() {
+            const files = document.getElementById('store-screenshots').files;
+            const err = document.getElementById('screenshots-error');
+            err.textContent = "";
+            if(files.length === 0 || files.length > 10) { err.textContent = "1-10 arası görsel yükleyiniz."; return false; }
+            for(let f of files) {
+                if(f.type !== 'image/jpeg') { err.textContent = "Tüm screenshotlar JPG olmalıdır."; return false; }
+                const valid = await new Promise(r => {
+                    const i = new Image();
+                    i.onload = function() { r(this.width === 3840 && this.height === 2160); };
+                    i.src = URL.createObjectURL(f);
+                });
+                if(!valid) { err.textContent = "Tüm screenshotlar 3840x2160 olmalıdır."; return false; }
+            }
+            return true;
+        }
+
+        async function validateTrophyImages() {
+            const files = document.getElementById('trophy-images').files;
+            const err = document.getElementById('trophy-error');
+            if(files.length === 0) { err.textContent = "En az 1 trophy ikonu gereklidir."; return false; }
+            for(let f of files) {
+                if(f.type !== 'image/png') { err.textContent = "Trophy ikonları PNG olmalıdır."; return false; }
+                const valid = await new Promise(r => {
+                    const i = new Image();
+                    i.onload = function() { r(this.width === 512 && this.height === 512); };
+                    i.src = URL.createObjectURL(f);
+                });
+                if(!valid) { err.textContent = "Tüm trophy ikonları 512x512 olmalıdır."; return false; }
+            }
+            return true;
+        }
+
+        function openPhotopea(w, h) {
+             const script = `app.documents.add(${w}, ${h}, 72, "New Document", NewDocumentMode.RGB, [255,255,255], 1);`; 
+             window.open(`https://www.photopea.com#${encodeURIComponent(JSON.stringify({script}))}`, '_blank');
+        }
+        function displayFileName(input) { document.getElementById(input.id+'-status').textContent = input.files[0]?.name || ''; }
+        function displayFileCount(input) { document.getElementById(input.id+'-status').textContent = input.files.length + " dosya"; }
+
+        // --- PACKAGING LOGIC ---
+        async function createAndDownloadZip() {
+            playSound('package-sfx');
+            const zip = new JSZip();
+            const gameName = document.getElementById('game-name').value;
+            const devName = document.getElementById('developer-name').value;
+            
+            // 1. Text & Translation File
+            const shortD = document.getElementById('short-desc').value;
+            const longD = document.getElementById('long-desc').value;
+            
+            const languages = [
+                "English", "Arabic", "Chinese - Simplified", "Chinese - Traditional", "Danish", "Dutch", 
+                "Finnish", "French", "German", "Italian", "Japanese", "Korean", "Norwegian", "Polish", 
+                "Portuguese", "Russian", "Spanish", "Swedish", "Turkish", "Ukrainian"
+            ];
+            
+            let metadataContent = `GAME METADATA\n-----------------\nGame Name: ${gameName}\nDeveloper: ${devName}\nExport Date: ${new Date().toISOString()}\n\n`;
+            metadataContent += `[ENGLISH - DEFAULT]\nShort Description (Max 80): ${shortD}\n\nLong Description (Max 3900):\n${longD}\n\n`;
+            metadataContent += `-----------------\nREQUIRED TRANSLATIONS\nPlease fill in the descriptions for the following languages:\n\n`;
+            
+            languages.forEach(lang => {
+                metadataContent += `[${lang}]\nShort Desc:\nLong Desc:\n\n`;
+            });
+
+            zip.file("Metadata_Translations.txt", metadataContent);
+
+            // Helper to add file
+            const add = async (folder, id, name) => {
+                const el = document.getElementById(id);
+                if(el.files.length > 0) zip.folder(folder).file(name, await el.files[0].arrayBuffer());
+            };
+
+            // 2. Folder Structure
+            
+            // A. Store Images (JPG)
+            await add("A_Store_Images", "master-image", "1_Master_Image_2160x2160.jpg");
+            await add("A_Store_Images", "cover-art", "2_Cover_Art_3840x2160.jpg");
+            await add("A_Store_Images", "master-16x9", "3_Master_Image_16x9_3840x2160.jpg");
+            await add("A_Store_Images", "master-4x3", "4_Master_Image_4x3_2880x2160.jpg");
+            await add("A_Store_Images", "portrait-banner", "5_Portrait_Banner_1440x2160.jpg");
+
+            // B. Dynamic (Layered)
+            await add("B_Dynamic_Layered", "game-logo", "Game_Logo.png");
+            await add("B_Dynamic_Layered", "bg-layer", "Background_Layer_3840x2160.jpg");
+
+            // C. Screenshots
+            const ssFiles = document.getElementById('store-screenshots').files;
+            for(let i=0; i<ssFiles.length; i++) {
+                zip.folder("C_Screenshots").file(`Screenshot_${i+1}_3840x2160.jpg`, await ssFiles[i].arrayBuffer());
+            }
+
+            // D. Build Assets (PNG)
+            await add("D_Build_Assets", "splash-screen", "Splash_Screen_3840x2160.png");
+            await add("D_Build_Assets", "save-icon", "Save_Icon_228x128.png");
+
+            // E. Trophies & Activities
+            await add("E_Trophies_Activities", "trophy-cover", "Trophy_Group_Cover_512x512.png");
+            await add("E_Trophies_Activities", "activity-card", "Activity_Card_864x1040.png");
+            const trFiles = document.getElementById('trophy-images').files;
+            for(let i=0; i<trFiles.length; i++) {
+                zip.folder("E_Trophies_Activities/Trophies").file(`Trophy_${i+1}_512x512.png`, await trFiles[i].arrayBuffer());
+            }
+
+            // Generate
+            const content = await zip.generateAsync({type:"blob"});
+            saveAs(content, `${gameName}_PlayStation_Package.zip`);
+            document.getElementById('zip-status').textContent = "✅ İndirme Başladı!";
+        }
+    </script>
+</body>
+</html>
